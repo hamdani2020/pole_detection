@@ -39,3 +39,23 @@ Para verificar se as configurações foram aplicadas corretamente, use o comando
 ```bash
 git config --list
 ```
+
+## Passo 4: Monitorar o Versionamento
+### 4.1 Verificar o Status do Repositório
+```bash
+git status
+```
+Exibe o estado atual do repositório, mostrando arquivos modificados, adicionados ou não rastreados.
+
+### 4.2 Ver o Histórico de Commits
+```bash
+git log
+```
+Mostra uma lista dos commits realizados no repositório, incluindo o hash do commit, o autor, a data e a mensagem do commit.
+
+## Passo 4.3: Ver o Histórico de Commits com Formato Resumido
+```bash
+git log --oneline
+```
+Exibe um resumo dos commits em uma linha, mostrando apenas o hash e a mensagem.
+
