@@ -88,3 +88,8 @@ Once the installation is complete, you can launch the Streamlit app using:
 ```bash
 streamlit run app.py
 ```
+# Exemplo de como tirar as fotos
+
+Acessa este site:
+
+https://br.freepik.com/fotos-vetores-gratis/poste-alta-tensao
