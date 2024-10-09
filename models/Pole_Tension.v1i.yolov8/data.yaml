@@ -1,0 +1,13 @@
+train: ../train/images
+val: ../valid/images
+test: ../test/images
+
+nc: 1
+names: ['lowTensionPole']
+
+roboflow:
+  workspace: jubilio-mausse-eiawh
+  project: pole_tension
+  version: 1
+  license: MIT
+  url: https://universe.roboflow.com/jubilio-mausse-eiawh/pole_tension/dataset/1
