@@ -26,8 +26,8 @@ logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
 st.set_page_config(
-    page_title="Balloon Detection App",
-    page_icon="🎈",
+    page_title="Pole Detection App",
+    page_icon="_|_",
     layout="wide",
     initial_sidebar_state="expanded"
 )
@@ -73,7 +73,7 @@ CLASSES = ["Balloon"]
 title = """<h1>Balloon Detection App</h1>"""
 st.markdown(title, unsafe_allow_html=True)
 subtitle = """
-Upload an image to detect balloons and view their location on a map
+Upload an image to detect Pole Tension and view their location on a map
 """
 st.markdown(subtitle)
 
