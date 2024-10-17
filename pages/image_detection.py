@@ -27,16 +27,19 @@ logger = logging.getLogger(__name__)
 
 st.set_page_config(
     page_title="Pole Detection App",
-    page_icon="_|_",
+    page_icon="🎈",
     layout="wide",
     initial_sidebar_state="expanded"
 )
+
+logo = "./imgs/logo.jpg"
+st.sidebar.image(logo)
 
 # Paths
 HERE = Path(__file__).parent
 ROOT = HERE.parent
 MODEL_URL = "https://github.com/hamdani2020/balloon/raw/main/last.pt"
-MODEL_LOCAL_PATH = ROOT / "models" / "last.pt"
+MODEL_LOCAL_PATH = ROOT / "models" / "best.pt"
 
 # Ensure the models directory exists
 os.makedirs(ROOT / "models", exist_ok=True)
