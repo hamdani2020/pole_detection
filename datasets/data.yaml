@@ -1,0 +1,13 @@
+train: /home/mausse/Documents/Pole_Detection/pole_detection/datasets/train/images
+val: /home/mausse/Documents/Pole_Detection/pole_detection/datasets/valid/images
+test: /home/mausse/Documents/Pole_Detection/pole_detection/datasets/test/images
+
+nc: 3
+names: ['high_tension', 'low_tension', 'medium_tension']
+
+roboflow:
+  workspace: poletension
+  project: pt-2ua0w
+  version: 1
+  license: MIT
+  url: https://universe.roboflow.com/poletension/pt-2ua0w/dataset/1
