@@ -69,8 +69,8 @@ logger.info("About to load the model")
 net = load_model()
 logger.info("Model loading complete")
 
-# Balloon is the only class
-CLASSES = ["Balloon"]
+# Tension Classes
+CLASSES = ["Low Tension", "Medium Tension", "High Tension"]
 
 # Title and introduction
 title = """<h1>Pole Detection App</h1>"""
@@ -84,18 +84,14 @@ st.markdown(subtitle)
 uploaded_files = st.file_uploader("Upload Images", type=["png", "jpg", "jpeg", "webp"], accept_multiple_files=True)
 score_threshold = st.slider("Confidence Threshold", min_value=0.0, max_value=1.0, value=0.1, step=0.05)
 
-# Função para corrigir a orientação da imagem
+# Function to correct image orientation
 def correct_image_orientation(image):
     try:
-        # Verifique se a imagem possui informações EXIF
         exif = image._getexif()
         if exif is not None:
-            # Obtenha o código da orientação
             for orientation in ExifTags.TAGS.keys():
                 if ExifTags.TAGS[orientation] == 'Orientation':
                     break
-            
-            # Verifique e aplique a rotação necessária com base no valor da orientação
             exif_orientation = exif.get(orientation)
             if exif_orientation == 3:
                 image = image.rotate(180, expand=True)
@@ -104,8 +100,7 @@ def correct_image_orientation(image):
             elif exif_orientation == 8:
                 image = image.rotate(90, expand=True)
     except Exception as e:
-        logger.error(f"Erro ao corrigir a orientação da imagem: {e}")
-    
+        logger.error(f"Error correcting image orientation: {e}")
     return image
 
 # Extract GPS info from image
@@ -113,74 +108,77 @@ def extract_gps_info(image):
     try:
         exif_dict = piexif.load(image.info["exif"])
         gps_info = exif_dict.get("GPS", {})
-        
         if gps_info:
             lat = gps_info.get(piexif.GPSIFD.GPSLatitude)
             lat_ref = gps_info.get(piexif.GPSIFD.GPSLatitudeRef)
             lon = gps_info.get(piexif.GPSIFD.GPSLongitude)
             lon_ref = gps_info.get(piexif.GPSIFD.GPSLongitudeRef)
-            
             if lat and lon and lat_ref and lon_ref:
                 lat = sum(float(x) / float(y) for x, y in lat) * (-1 if lat_ref == b'S' else 1)
                 lon = sum(float(x) / float(y) for x, y in lon) * (-1 if lon_ref == b'W' else 1)
                 return lat, lon
     except Exception as e:
         logger.error(f"Error extracting GPS info: {e}")
-    
     return None, None
 
-# Process image and detect balloons
+# Process image and detect poles
 def process_image(image_file):
     logger.info(f"Processing image: {image_file.name}")
     image = Image.open(image_file)
-
-    # Corrigir a orientação da imagem
     image = correct_image_orientation(image)
-
     lat, lon = extract_gps_info(image)
     _image = np.array(image)
-    
-    # Resize image for better processing
+
     h_ori, w_ori = _image.shape[:2]
     image_resized = cv2.resize(_image, (720, 640), interpolation=cv2.INTER_AREA)
-    
-    # Run prediction
+
     results = net.predict(image_resized, conf=score_threshold)
-    
-    # Annotate the image with detection results
     annotated_frame = results[0].plot()
     image_pred = cv2.resize(annotated_frame, (w_ori, h_ori), interpolation=cv2.INTER_AREA)
-    
+
     return _image, image_pred, lat, lon
 
-# Create map with detected balloons
+# Create map with detected poles
 def create_map(coordinates):
     m = folium.Map(location=[0, 0], zoom_start=2)
     for lat, lon in coordinates:
         if lat is not None and lon is not None:
-            folium.Marker([lat, lon], popup="Balloon detected").add_to(m)
+            folium.Marker([lat, lon], popup="Pole detected").add_to(m)
     return m
+
+# Fine-tune the model with new data
+def fine_tune_model(model, new_data_path, epochs=10):
+    logger.info("Fine-tuning model with new data...")
+    new_data = load_new_data(new_data_path)
+    model.train(data=new_data, epochs=epochs)
+    logger.info("Model fine-tuning complete")
+    return model
+
+# Save corrected data
+def save_corrected_data(image, correct_class, image_file):
+    save_path = ROOT / "new_training_data" / correct_class
+    os.makedirs(save_path, exist_ok=True)
+    image_save_path = save_path / f"{image_file.name}"
+    image.save(image_save_path)
+    logger.info(f"Saved corrected image to {image_save_path}")
+    return image_save_path
 
 # Process images and display results
 if uploaded_files:
     all_coordinates = []
     for image_file in uploaded_files:
         st.write(f"### Processing: {image_file.name}")
-        # Process and display images
         original_image, predicted_image, lat, lon = process_image(image_file)
         all_coordinates.append((lat, lon))
-        
+
         col1, col2 = st.columns(2)
-        # Display original image
         with col1:
             st.write("#### Original Image")
             st.image(original_image)
-        # Display predicted image
         with col2:
             st.write("#### Predictions")
             st.image(predicted_image)
-            
-        # Option to download the predicted image
+
         buffer = BytesIO()
         download_image = Image.fromarray(predicted_image)
         download_image.save(buffer, format="PNG")
@@ -191,18 +189,29 @@ if uploaded_files:
             file_name=f"Predicted_{image_file.name}",
             mime="image/png"
         )
-        
+
+        correct_class = st.selectbox(
+            "Correct Class (if wrong)",
+            CLASSES + ["No Change"], index=3
+        )
+
+        if correct_class != "No Change":
+            save_corrected_data(Image.fromarray(predicted_image), correct_class, image_file)
+            st.write(f"Saved corrected image as {correct_class}")
+
         if lat is not None and lon is not None:
             st.write(f"GPS Coordinates: Latitude {lat:.6f}, Longitude {lon:.6f}")
         else:
             st.write("No GPS coordinates found in the image metadata.")
-    
-    # Create and display the map
-    st.write("### Map of Detected Balloons")
+
+    st.write("### Map of Detected Poles")
     map = create_map(all_coordinates)
     folium_static(map)
 
+# Option to re-train the model with new data
+if st.button("Re-train Model with New Data"):
+    net = fine_tune_model(net, ROOT / "new_training_data")
+    st.write("Model fine-tuned with new data!")
+
 logger.info("All images processed successfully")
 logger.info("App execution completed")
-
-# <<< Code ends here >>>
