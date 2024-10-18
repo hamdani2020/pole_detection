@@ -73,7 +73,7 @@ logger.info("Model loading complete")
 CLASSES = ["Balloon"]
 
 # Title and introduction
-title = """<h1>Balloon Detection App</h1>"""
+title = """<h1>Pole Detection App</h1>"""
 st.markdown(title, unsafe_allow_html=True)
 subtitle = """
 Upload an image to detect Pole Tension and view their location on a map
