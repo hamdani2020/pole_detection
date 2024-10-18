@@ -20,7 +20,7 @@ import piexif
 
 # Map display
 import folium
-from streamlit_folium import folium_static
+from streamlit_folium import st_folium
 
 # <<< Code starts here >>>
 # Configure logging
@@ -40,7 +40,7 @@ st.sidebar.image(logo)
 # Paths
 HERE = Path(__file__).parent
 ROOT = HERE.parent
-MODEL_URL = "https://github.com/Jubilio"
+MODEL_URL = "models"
 MODEL_LOCAL_PATH = ROOT / "models" / "pole.pt"
 
 # Ensure the models directory exists
@@ -105,42 +105,50 @@ def correct_image_orientation(image):
         logger.error(f"Error correcting image orientation: {e}")
     return image
 
-# Extract GPS info from image
-def extract_gps_info(image):
+def extract_gps_info(exif_data):
     try:
-        exif_dict = piexif.load(image.info["exif"])
-        gps_info = exif_dict.get("GPS", {})
+        gps_info = exif_data.get("GPSInfo")
         if gps_info:
-            lat = gps_info.get(piexif.GPSIFD.GPSLatitude)
-            lat_ref = gps_info.get(piexif.GPSIFD.GPSLatitudeRef)
-            lon = gps_info.get(piexif.GPSIFD.GPSLongitude)
-            lon_ref = gps_info.get(piexif.GPSIFD.GPSLongitudeRef)
-            if lat and lon and lat_ref and lon_ref:
-                # Convert latitude
-                lat = float(lat[0]) / float(lat[1]) + \
-                      float(lat[2]) / float(lat[3]) / 60 + \
-                      float(lat[4]) / float(lat[5]) / 3600
-                lat *= -1 if lat_ref == b'S' else 1
-                
-                # Convert longitude
-                lon = float(lon[0]) / float(lon[1]) + \
-                      float(lon[2]) / float(lon[3]) / 60 + \
-                      float(lon[4]) / float(lon[5]) / 3600
-                lon *= -1 if lon_ref == b'W' else 1
-                
-                return lat, lon
-
+            # Garantir que o valor seja convertido corretamente
+            lat = convert_to_degrees(gps_info[2])
+            lon = convert_to_degrees(gps_info[4])
+            return lat, lon
+        else:
+            raise ValueError("No GPSInfo found")
     except Exception as e:
-        logger.error(f"Error extracting GPS info: {e}")
-    return None, None
+        print(f"Error extracting GPS info: {e}")
+        return None
+
+def convert_to_degrees(value):
+    # Converter corretamente tuple para um número decimal
+    d = float(value[0])
+    m = float(value[1])
+    s = float(value[2])
+    
+    return d + (m / 60.0) + (s / 3600.0)
 
 
-# Process image and detect poles
 def process_image(image_file):
     logger.info(f"Processing image: {image_file.name}")
     image = Image.open(image_file)
     image = correct_image_orientation(image)
-    lat, lon = extract_gps_info(image)
+
+    # Inicializar latitude e longitude como None
+    lat, lon = None, None
+
+    # Extração dos dados EXIF, somente para imagens JPEG
+    if image.format == 'JPEG':
+        try:
+            exif_data = image._getexif()
+            if exif_data is not None:
+                lat, lon = extract_gps_info(exif_data)
+            else:
+                logger.warning("No EXIF data found in the image.")
+        except AttributeError as e:
+            logger.error(f"Error accessing EXIF data: {e}")
+    else:
+        logger.warning(f"EXIF data is not supported for the image format: {image.format}")
+
     _image = np.array(image)
 
     h_ori, w_ori = _image.shape[:2]
@@ -151,6 +159,7 @@ def process_image(image_file):
     image_pred = cv2.resize(annotated_frame, (w_ori, h_ori), interpolation=cv2.INTER_AREA)
 
     return _image, image_pred, lat, lon
+
 
 # Create map with detected poles
 def create_map(coordinates):
@@ -244,7 +253,8 @@ if uploaded_files:
 
     st.write("### Map of Detected Poles")
     map = create_map(all_coordinates)
-    folium_static(map)
+    st_folium(map)
+
 
 # Option to re-train the model with new data
 if st.button("Re-train Model with New Data"):
