@@ -37,7 +37,7 @@ st.set_page_config(
 logo = "./imgs/logo.jpg"
 st.sidebar.image(logo)
 
-# Paths
+# Paths to models
 HERE = Path(__file__).parent
 ROOT = HERE.parent
 MODEL_URL = "https://raw.githubusercontent.com/Jubilio/pole_detection/main/models/best.pt"
