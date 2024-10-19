@@ -40,7 +40,7 @@ st.sidebar.image(logo)
 # Paths
 HERE = Path(__file__).parent
 ROOT = HERE.parent
-MODEL_URL = "models"
+MODEL_URL = "https://github.com/Jubilio/pole_detection/blob/main/models/best.pt"
 MODEL_LOCAL_PATH = ROOT / "models" / "pole.pt"
 
 # Ensure the models directory exists
