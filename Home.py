@@ -1,6 +1,7 @@
 import streamlit as st
 import cv2
 import numpy as np
+from PIL import Image
 
 # Configuração da página
 st.set_page_config(
@@ -75,7 +76,17 @@ st.markdown(f"<h2 style='text-align: center; color: {primary_color}; margin-top:
 # Imagens lado a lado: original e com detecção
 col1, col2 = st.columns(2)
 with col1:
-    st.image("./imgs/Low_tension_pole_3 (2).jpg", caption="Imagem Original", use_column_width=True)
+    # Carregar a imagem
+    image_path = "./imgs/Low_tension_pole_3 (2).jpg"
+    image = Image.open(image_path)
+
+    # Rotacionar a imagem 90 graus no sentido horário
+    rotated_image = image.rotate(-90, expand=True)
+
+    # Exibir a imagem rotacionada no Streamlit
+    st.image(rotated_image, caption="Imagem Original", use_column_width=True)
+    #st.image("./imgs/Low_tension_pole_3 (2).jpg", caption="Imagem Original", use_column_width=True)
+
 with col2:
     st.image("./imgs/Low_tension_pole_3.jpg", caption="Imagem com Detecção", use_column_width=True)
 
