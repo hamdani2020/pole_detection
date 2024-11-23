@@ -11,6 +11,8 @@ env/
 ENV/
 .venv/
 .ipynb_checkpoints/
+jub
+.devcontainer
 
 # Ignore Jupyter notebook checkpoints and outputs
 .ipynb_checkpoints
