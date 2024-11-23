@@ -81,3 +81,4 @@ ultralytics-thop==2.0.12
 urllib3==2.2.3
 watchdog==6.0.0
 xyzservices==2024.9.0
+opencv-python-headless
