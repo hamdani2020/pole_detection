@@ -24,6 +24,9 @@ st.set_page_config(
     initial_sidebar_state="expanded"
 )
 
+logo = "./imgs/logo.jpg"
+st.sidebar.image(logo)
+
 # Paths to models
 HERE = Path(__file__).parent
 ROOT = HERE.parent
