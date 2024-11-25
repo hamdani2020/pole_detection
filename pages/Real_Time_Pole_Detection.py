@@ -2,8 +2,6 @@ import os
 import streamlit as st
 from pathlib import Path
 import logging
-from aiortc.contrib.media import MediaPlayer
-from aiortc.contrib.media import MediaRecorder
 import cv2
 import numpy as np
 from ultralytics import YOLO
@@ -11,7 +9,6 @@ from sample_utils.download import download_file
 import av
 import time
 from streamlit_webrtc import webrtc_streamer, WebRtcMode, RTCConfiguration
-import threading
 
 # Configure logging
 logging.basicConfig(level=logging.INFO)
@@ -138,43 +135,3 @@ if webrtc_ctx.state.playing:
             st.write(f"Object detected with confidence: {detection[4]:.2f}")
     else:
         st.write(f"No objects detected.")
-
-# Local webcam capture using OpenCV
-cap = cv2.VideoCapture(0)  # Use 0 if your webcam is at index 0
-
-# Placeholder for displaying frames
-frame_placeholder = st.empty()
-
-# Stop button
-stop_button_pressed = st.button("Stop Webcam")
-
-# Loop to capture and display frames
-if not webrtc_ctx.state.playing:
-    while cap.isOpened():
-        ret, frame = cap.read()
-
-        if not ret:
-            st.write("The video capture has ended.")
-            break
-
-        # Convert BGR to RGB for display in Streamlit
-        frame_rgb = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
-
-        # Perform detection
-        results = net.predict(frame_rgb, conf=score_threshold)
-        annotated_frame = results[0].plot()
-
-        # Display the frame in the placeholder
-        frame_placeholder.image(annotated_frame, channels="RGB")
-
-        # Check if stop button is pressed
-        if stop_button_pressed:
-            break
-
-        # Optional: Stop if 'q' is pressed (for debugging)
-        if cv2.waitKey(1) & 0xFF == ord("q"):
-            break
-
-    # Release the capture and close OpenCV windows
-    cap.release()
-    cv2.destroyAllWindows()
