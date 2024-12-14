@@ -4,7 +4,7 @@ from pathlib import Path
 import logging
 
 import tempfile
-#import cv2
+import cv2
 import numpy as np
 
 from sample_utils.download import download_file
