@@ -24,7 +24,7 @@ st.sidebar.info(
     """
 )
 logo = "./imgs/logo.jpg"  # Certifique-se de que o caminho do logo está correto
-st.sidebar.image(logo, use_column_width=True)
+st.sidebar.image(logo, use_container_width=True)
 
 # Título da página
 st.markdown(f"<h1 style='text-align: center; color: {primary_color};'>⚡️ Pole Detection App</h1>", unsafe_allow_html=True)
