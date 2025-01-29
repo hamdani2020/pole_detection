@@ -4,34 +4,29 @@ from io import BytesIO
 from pathlib import Path
 
 import cv2
-
-# Map display
 import folium
 import numpy as np
-
-# Extraction of coordinates from image
 import piexif
 import streamlit as st
 from PIL import ExifTags, Image
 from streamlit_folium import st_folium
-
-# Model
 from ultralytics import YOLO
 
 from sample_utils.download import download_file
 
-# <<< Code starts here >>>
 # Configure logging
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
+# Set page configuration
 st.set_page_config(
     page_title="Pole Detection App",
-    page_icon="🏗️",  # Emoji de poste de eletricidade
+    page_icon="🏗️",
     layout="wide",
     initial_sidebar_state="expanded",
 )
 
+# Load logo
 logo = "./imgs/logo.jpg"
 st.sidebar.image(logo)
 
@@ -78,20 +73,32 @@ logger.info("Model loading complete")
 CLASSES = ["low_tension", "medium_tension", "high_tension"]
 
 # Title and introduction
-title = """<h1>Pole Detection App</h1>"""
-st.markdown(title, unsafe_allow_html=True)
-subtitle = """
-Upload an image to detect Pole Tension and view their location on a map
-"""
-st.markdown(subtitle)
-
-# File upload section
-uploaded_files = st.file_uploader(
+st.markdown(
+    "<h1 style='text-align: center; color: #4CAF50;'>Pole Detection App</h1>",
+    unsafe_allow_html=True,
+)
+st.markdown(
+    """
+    <div style='text-align: center;'>
+        Upload an image to detect Pole Tension and view their location on a map.
+    </div>
+""",
+    unsafe_allow_html=True,
+)
+# Sidebar settings
+st.sidebar.title("Settings")
+st.sidebar.markdown("Upload images and adjust the confidence threshold below.")
+uploaded_files = st.sidebar.file_uploader(
     "Upload Images", type=["png", "jpg", "jpeg", "webp"], accept_multiple_files=True
 )
-score_threshold = st.slider(
+score_threshold = st.sidebar.slider(
     "Confidence Threshold", min_value=0.0, max_value=1.0, value=0.1, step=0.05
 )
+
+# Reset button
+if st.sidebar.button("Reset App"):
+    st.session_state.clear()
+    st.rerun()
 
 
 # Function to correct image orientation
@@ -114,17 +121,8 @@ def correct_image_orientation(image):
     return image
 
 
+# Extract GPS info
 def extract_gps_info(image_file):
-    """
-    Extracts GPS information from an image file.
-
-    Args:
-    image_file (file object): An opened file object containing the image.
-
-    Returns:
-    tuple: A tuple containing two floats (latitude, longitude) in decimal degrees.
-           Returns (None, None) if GPS information is not available or if an error occurs.
-    """
     try:
         image = Image.open(image_file)
         if "exif" in image.info:
@@ -169,6 +167,7 @@ def extract_gps_info(image_file):
         return None, None
 
 
+# Process image
 def process_image(image_file):
     logger.info(f"Processing image: {image_file.name}")
     image = Image.open(image_file)
@@ -196,72 +195,36 @@ def create_map(coordinates):
 
     for i, (lat, lon) in enumerate(coordinates):
         if lat is not None and lon is not None:
-            # Create a custom icon for the marker
-            icon = folium.Icon(
-                color="red",  # Red color for visibility
-                icon="tower",  # Electric tower/pole icon
-                prefix="fa",  # Font Awesome icon prefix
-            )
-
-            # Add marker with popup showing the pole number
+            icon = folium.Icon(color="red", icon="tower", prefix="fa")
             folium.Marker([lat, lon], popup=f"Pole {i+1}", icon=icon).add_to(m)
 
     return m
 
 
-# Check if new training data exists
-def check_new_data_exists(new_data_path):
-    if not os.path.exists(new_data_path):
-        logger.error(f"New training data directory does not exist: {new_data_path}")
-        return False
-    files = os.listdir(new_data_path)
-    if not files:
-        logger.error(f"New training data directory is empty: {new_data_path}")
-        return False
-    return True
-
-
-# Fine-tune the model with new data
-def fine_tune_model(model, new_data_path, epochs=5, batch_size=32, imgsz=640):
-    logger.info("Fine-tuning model with new data...")
-
-    if not check_new_data_exists(new_data_path):
-        st.error(
-            "No new training data found. Please ensure the directory contains data."
-        )
-        return model  # Return the original model without fine-tuning
-
-    # Prepare the data path for training
-    data_yaml_path = ROOT / "datasets" / "data.yaml"  # / "data.yaml"
-
-    # Generate the training command
-    command = f"yolo task=detect mode=train model={MODEL_LOCAL_PATH} data={data_yaml_path} epochs={epochs} batch={batch_size} imgsz={imgsz}"
-
-    # Run the training command
-    logger.info(f"Running command: {command}")
-    os.system(command)  # Execute the command in the shell
-
-    logger.info("Model fine-tuning complete")
-    return model
-
-
-# Save corrected data
-def save_corrected_data(image, correct_class, image_file):
-    save_path = ROOT / "new_training_data" / correct_class
-    os.makedirs(save_path, exist_ok=True)
-    image_save_path = save_path / f"{image_file.name}"
-    image.save(image_save_path)
-    logger.info(f"Saved corrected image to {image_save_path}")
-    return image_save_path
-
+# Welcome message
+if not uploaded_files:
+    st.write("## Welcome to the Pole Detection App!")
+    st.write("""
+    This app detects poles in images and displays their locations on a map. 
+    To get started:
+    1. Upload one or more images using the file uploader in the sidebar.
+    2. Adjust the confidence threshold if needed.
+    3. View the results and download the predicted images.
+    """)
 
 # Process images and display results
 if uploaded_files:
+    progress_bar = st.progress(0)
+    total_files = len(uploaded_files)
     all_coordinates = []
-    for image_file in uploaded_files:
+
+    for i, image_file in enumerate(uploaded_files):
         st.write(f"### Processing: {image_file.name}")
         original_image, predicted_image, lat, lon = process_image(image_file)
         all_coordinates.append((lat, lon))
+
+        # Update progress bar
+        progress_bar.progress((i + 1) / total_files)
 
         col1, col2 = st.columns(2)
         with col1:
@@ -271,6 +234,7 @@ if uploaded_files:
             st.write("#### Predictions")
             st.image(predicted_image)
 
+        # Download button
         buffer = BytesIO()
         download_image = Image.fromarray(predicted_image)
         download_image.save(buffer, format="PNG")
@@ -282,8 +246,12 @@ if uploaded_files:
             mime="image/png",
         )
 
+        # Correct class selection
         correct_class = st.selectbox(
-            "Correct Class (if wrong)", CLASSES + ["No Change"], index=3
+            "Correct Class (if wrong)",
+            CLASSES + ["No Change"],
+            index=3,
+            key=f"class_{i}",
         )
 
         if correct_class != "No Change":
@@ -297,21 +265,18 @@ if uploaded_files:
         else:
             st.write("No GPS coordinates found in the image metadata.")
 
+    # Map display with toggle
     st.write("### Map of Detected Poles")
-    map = create_map(all_coordinates)
-    st_folium(map)
+    show_map = st.checkbox("Show Map", value=True)
+    if show_map:
+        map = create_map(all_coordinates)
+        st_folium(map, width=1200, height=600)
 
+# Footer
+st.markdown("---")
+st.markdown("""
+    **Pole Detection App**  
+    Built with Streamlit, YOLO, and Folium.  
+    Developed by DATA4MOZ 
+""")
 
-# Option to re-train the model with new data
-if st.button("Re-train Model with New Data"):
-    new_data_path = ROOT / "new_training_data"
-    if check_new_data_exists(new_data_path):
-        net = fine_tune_model(net, new_data_path)
-        st.write("Model fine-tuned with new data!")
-    else:
-        st.error("No valid new training data found for fine-tuning.")
-
-logger.info("All images processed successfully")
-logger.info("App execution completed")
-
-# <<< Code ends here >>>
